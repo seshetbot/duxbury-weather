@@ -1,9 +1,19 @@
 import { format } from "date-fns";
-import { fetchDuxburyWeather, weatherCodeLabel } from "@/lib/weather";
+import { fetchDuxburyWeather, weatherCodeLabel, DUXBURY } from "@/lib/weather";
+import { fetchActiveAlerts } from "@/lib/nws";
+import { fetchTidePredictions } from "@/lib/noaa";
 import { logWeatherView } from "@/app/actions/logWeatherView";
+import { AlertsPanel } from "@/components/AlertsPanel";
+import { TidesPanel } from "@/components/TidesPanel";
+import { RadarPanel } from "@/components/RadarPanel";
 
 export default async function Home() {
-  const weather = await fetchDuxburyWeather();
+  const [weather, alerts, tides] = await Promise.all([
+    fetchDuxburyWeather(),
+    fetchActiveAlerts().catch(() => []),
+    fetchTidePredictions().catch(() => null),
+  ]);
+
   // Fire-and-forget log (safe if supabase not configured).
   void logWeatherView();
 
@@ -55,8 +65,17 @@ export default async function Home() {
         </div>
       </section>
 
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        <AlertsPanel alerts={alerts} />
+        {tides ? <TidesPanel station={tides.station} predictions={tides.predictions} /> : null}
+      </div>
+
+      <div className="mt-10">
+        <RadarPanel />
+      </div>
+
       <footer className="mt-10 text-xs text-slate-400">
-        Data source: Open-Meteo. This is a demo app; verify conditions before heading out.
+        Data sources: Open-Meteo, NOAA CO-OPS, NWS, RainViewer. This is a demo app; verify conditions before heading out.
       </footer>
     </main>
   );
